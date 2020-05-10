@@ -14,9 +14,6 @@ METRICS = [
      tf.keras.metrics.Precision(name='precision'),
      tf.keras.metrics.Recall(name='recall'),
 ]
-
-
-
 class Trader:
 
     def __init__(self,save_location):
@@ -99,6 +96,14 @@ class Trader:
         results = self.model.fit(self.train_lstm[0], self.train_lstm[1], epochs=epochs, batch_size=100,callbacks=[self.checkpoint], verbose=1)
 
 
+    def predict(self,data):
+        y_columns = pd.get_dummies(self.test[['acao']]).sort_index(axis=1).columns
+        time_steps = self.test_shape[1]
+        predictions = self.model.predict(data)
+        prediction_df = pd.DataFrame(predictions,columns=y_columns,index=self.test_df[time_steps:].index).sort_index(axis=1)
+        self.prediction = prediction_df
+        return prediction_df
+
 
     def loadTestData(self,path):
         test = loadNegocios(path)
@@ -129,15 +134,31 @@ class Trader:
 
 
 
-
-
-    def showGraph(self,df):
+    def plotGraph(self,df):
         fig = buildMainGraph(df)
         #Ações que devem ser tomadas (comprar e vender)
         for (acao,v) in df[df != 'do nothing'].groupby('acao'):
             if(acao == 'do nothing'):
                 continue
             fig.add_trace(go.Scatter(x=v.index,y=v.preco,mode='markers',name=acao, marker={'color':ORDER_COLORS[acao] }),row=1,col=2)
+
+        fig.update_layout(barmode='stack',margin=dict(r=10, t=10, b=10, l=10),width=1200)
+        fig.show()
+
+    def plotPredictions(self,prediction_df):
+        n_buys = len(prediction_df.query('acao_buy >=0.7'))
+        n_sells = len(prediction_df.query('acao_sell >=0.7'))
+        #PLotar o Grafico de treino e teste
+        fig = make_subplots(shared_yaxes=True,shared_xaxes=True)
+        #Add a linha do preço
+        fig.add_trace(go.Scatter( x=self.test_df.index, y=self.test_df.preco, name="Preço"  ))
+
+        # Predictions
+        for v in prediction_df.sort_values(by='acao_buy',ascending=False).head(n_buys).itertuples():
+            fig.add_trace(go.Scatter(x=[v.Index],y=self.test_df[self.test_df.index == v.Index].preco,mode='markers',text=round(v.acao_buy*100,2),legendgroup='buys', name='predicted buy',marker={'color':'#a0e69c'}))
+
+        for v in prediction_df.sort_values(by='acao_sell',ascending=False).head(n_sells).itertuples():
+            fig.add_trace(go.Scatter(x=[v.Index],y=self.test_df[self.test_df.index == v.Index].preco,mode='markers',name='predicted sell',text=round(v.acao_sell*100,2),marker={'color':'#e03884'}))
 
         fig.update_layout(barmode='stack',margin=dict(r=10, t=10, b=10, l=10),width=1200)
         fig.show()

@@ -85,7 +85,7 @@ def loadNegocios(path):
   negocios = negocios.drop(['codigo_x','codigo_y','cod_vendedor','cod_comprador','cod_agressor'],axis=1) # drop de colunas desnecessarias
 
   #Aqui o que o trader deve fazer
-  negocios['acao'] = 'do nothing'
+  negocios['acao'] = 'do_nothing'
   negocios['acao'] = negocios['acao'].astype('category')
   negocios.acao.cat.set_categories(['do nothing','buy','sell'],inplace=True)
   return negocios
@@ -112,7 +112,7 @@ def negociosWithDummies(negocios):
 #Sugere entradas de compra e venda na coluna acao
 def sugestEntrances(negocios):
   #pontos de entrada automatico
-  negocios['acao'] = 'do nothing' # reset
+  negocios['acao'] = 'do_nothing' # reset
 
   current_moment = negocios.index.min()
   last_moment = current_moment
