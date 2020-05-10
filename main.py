@@ -25,4 +25,11 @@ trader.fit()
 #%%
 trader.loadTestData('./dolar/negocios/20200220_dolh20')
 
+#%%
+trader.model.load_weights('./dolar/dolar_oversampled.h5')
+#%%
+predictions = trader.model.predict(trader.test_data[0])
+# %%
+trader.model.evaluate(trader.test_data[0],predictions)
+
 # %%

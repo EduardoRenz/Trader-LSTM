@@ -22,15 +22,16 @@ class Trader:
     def __init__(self,save_location):
         self.train_data = None # X e y do treino
         self.train = None # Original DataFrame
-        self.train_df = None # DataFrame depois de aplicado dummies
-        self.train_lstm = None # LSTM dos dados de treino
+        self.train_df = None # DataFrame after dummies columns
+        self.train_lstm = None # LSTM data for training
         self.train_shape = None
         self.test_data = None # X e y do teste
         self.test = None # Original DataFrame
-        self.test_df = None # DataFrame depois de aplicado dummies
+        self.test_df = None # DataFrame after dummies columns
         self.test_shape = None
         self.model = None
         self.save_location = save_location
+        self.checkpoint = None # Callback from keras to automatic save the model weights
 
 
     def buildModel(self,input_shape):
@@ -54,7 +55,7 @@ class Trader:
         model.add(keras.layers.Dense(3,activation='softmax'))
 
         model.compile(loss=keras.losses.CategoricalCrossentropy(),optimizer=optimizer,metrics=METRICS)
-        checkpoint = ModelCheckpoint(self.save_location, monitor='loss', verbose=1,save_best_only=True, mode='auto', save_freq=1000)
+        self.checkpoint = ModelCheckpoint(self.save_location, monitor='loss', verbose=1,save_best_only=True, mode='auto', save_freq='epoch')
 
         self.model = model
         return model   
@@ -95,12 +96,13 @@ class Trader:
     def fit(self,epochs=200,build_model=True):
         if build_model:
             self.buildModel(self.train_shape)
-        results = self.model.fit(self.train_lstm[0], self.train_lstm[1], epochs=epochs, batch_size=100,callbacks=[checkpoint], verbose=1)
+        results = self.model.fit(self.train_lstm[0], self.train_lstm[1], epochs=epochs, batch_size=100,callbacks=[self.checkpoint], verbose=1)
 
 
 
     def loadTestData(self,path):
         test = loadNegocios(path)
+        test = sugestEntrances(test)
         self.test = test
         # Gera df agora com dummies
         test_w_targets = negociosWithDummies(test).copy()
