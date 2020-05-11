@@ -29,6 +29,7 @@ class Trader:
         self.model = None
         self.save_location = save_location
         self.checkpoint = None # Callback from keras to automatic save the model weights
+        self.time_steps = 50
 
 
     def buildModel(self,input_shape):
@@ -79,8 +80,7 @@ class Trader:
         #Oversampling
         X_train_res, y_train_res = oversample(X_train_scaled,y_train)
         #Transforma para LSTM
-        time_steps = 10
-        X_train_lstm,y_train_lstm = create_lstm_dataset(X_train_res,y_train_res,time_steps)
+        X_train_lstm,y_train_lstm = create_lstm_dataset(X_train_res,y_train_res,self.time_steps)
         
         self.train_lstm = (X_train_lstm,y_train_lstm)
 
@@ -124,8 +124,7 @@ class Trader:
         X_test_scaled = X_test.copy()
         X_test_scaled[['qtd','preco']] = scaler.transform(X_test[['qtd','preco']])
         #Transforma para LSTM
-        time_steps = 50
-        X_test_lstm,y_test_lstm = create_lstm_dataset(X_test_scaled,y_test,time_steps)
+        X_test_lstm,y_test_lstm = create_lstm_dataset(X_test_scaled,y_test,self.time_steps)
 
         test_shape = (None,time_steps,X_test_lstm.shape[-1])
 

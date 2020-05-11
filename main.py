@@ -22,7 +22,8 @@ trader = Trader('trade_oversampled.h5')
 #%%
 trader.loadTrainData('./dolar/negocios/20200220_dolh20')
 
-#%%
+#%% Treinar ou Re-Treinar o modelo
+trader.model.load_weights('./dolar/dolar_oversampled.h5')
 trader.fit()
 
 #%%
