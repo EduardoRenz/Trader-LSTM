@@ -84,6 +84,29 @@ def loadNegocios(path):
   negocios = negocios.drop('datetime',axis=1)
   negocios = negocios.drop(['codigo_x','codigo_y','cod_vendedor','cod_comprador','cod_agressor'],axis=1) # drop de colunas desnecessarias
 
+
+  #Data engeenering
+  negocios['vap'] = negocios.groupby(['preco'])['qtd'].transform('sum')
+  negocios['vap_5min'] = negocios.rolling('5min',min_periods=1).qtd.sum()
+  negocios['vap_comprador'] = negocios.query("agressor == 'comprador'").groupby(['preco'])['qtd'].transform('sum')
+  negocios['vap_vendedor'] = negocios.query("agressor == 'vendedor'").groupby(['preco'])['qtd'].transform('sum')
+  negocios['vap_direto'] = negocios.query("agressor == 'direto'").groupby(['preco'])['qtd'].transform('sum')
+
+  negocios.vap_vendedor.fillna(method='pad',inplace=True)
+  negocios.vap_comprador.fillna(method='pad',inplace=True)
+  negocios.vap_direto.fillna(method='pad',inplace=True)
+
+  negocios['vap_5min_comprador'] = negocios.query("agressor == 'comprador'").rolling('5min',min_periods=1)['qtd'].sum()
+  negocios['vap_5min_vendedor'] = negocios.query("agressor == 'vendedor'").rolling('5min',min_periods=1)['qtd'].sum() 
+  negocios['vap_5min_direto'] = negocios.query("agressor == 'direto'").rolling('5min',min_periods=1)['qtd'].sum() 
+
+
+  negocios.vap_5min_vendedor.fillna(method='pad',inplace=True)
+  negocios.vap_5min_comprador.fillna(method='pad',inplace=True)
+  negocios.vap_5min_direto.fillna(method='pad',inplace=True)
+
+  negocios.fillna(0,inplace=True)
+
   #Aqui o que o trader deve fazer
   negocios['acao'] = 'do_nothing'
   negocios['acao'] = negocios['acao'].astype('category')
