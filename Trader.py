@@ -7,57 +7,33 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
-ORDER_COLORS = {'buy':'green','sell':'red','stop':'yellow'}
+from sklearn.utils.class_weight import compute_class_weight
 
+ORDER_COLORS = {'buy':'green','sell':'red','stop':'yellow'}
 METRICS = [
      tf.keras.metrics.CategoricalAccuracy(name='accuracy'),
      tf.keras.metrics.Precision(name='precision'),
      tf.keras.metrics.Recall(name='recall'),
 ]
+SCALE_COLUMNS = ['preco','qtd','vap_comprador','vap_vendedor','vap_5min_comprador','vap_5min_vendedor']
+
 class Trader:
 
     def __init__(self,save_location):
         self.train_data = None # X e y do treino
         self.train = None # Original DataFrame
-        self.train_df = None # DataFrame after dummies columns
+        self.X_train_df = None # DataFrame after dummies columns
+        self.X_train_df_scaled = None
         self.train_lstm = None # LSTM data for training
         self.train_shape = None
         self.test_data = None # X e y do teste
         self.test = None # Original DataFrame
         self.test_df = None # DataFrame after dummies columns
         self.test_shape = None
-        self.model = None
         self.save_location = save_location
         self.checkpoint = None # Callback from keras to automatic save the model weights
         self.time_steps = 50
 
-
-    def buildModel(self,input_shape):
-        optimizer = keras.optimizers.Adam(lr=0.001)
-        dropout = 0.2 # dropout para cada lstm
-
-        model = keras.Sequential()
-        model.add(Bidirectional(LSTM(128, return_sequences=True, input_shape=input_shape)))
-        model.add(LeakyReLU())
-        model.add(Dropout(dropout))
-        model.add(BatchNormalization())
-
-        model.add(Bidirectional(LSTM(128,return_sequences=True)))
-        model.add(LeakyReLU())
-        model.add(Dropout(dropout))
-        model.add(BatchNormalization())
-
-        model.add(Bidirectional(keras.layers.LSTM(32)))
-        model.add(keras.layers.LeakyReLU())
-        model.add(Dropout(dropout))
-        model.add(keras.layers.Dense(3,activation='softmax'))
-
-        model.compile(loss=keras.losses.CategoricalCrossentropy(),optimizer=optimizer,metrics=METRICS)
-        self.checkpoint = ModelCheckpoint(self.save_location, monitor='loss', verbose=1,save_best_only=True, mode='auto', save_freq='epoch')
-
-        self.model = model
-        return model   
-        
 
     def loadTrainData(self,path):
         train = loadNegocios(path)
@@ -71,38 +47,30 @@ class Trader:
         # Train e train
         X_train = train_w_targets[X_columns].copy()
         y_train= train_w_targets[y_columns].sort_index(axis=1).copy()
-        self.train_df = X_train
+        self.X_train_df = X_train
         #Reescala os dados
         scaler = StandardScaler()
-        scaler.fit(X_train[['qtd','preco']])
-        X_train_scaled = X_train.copy()
-        X_train_scaled[['qtd','preco']] = scaler.transform(X_train[['qtd','preco']])
+        X_train_df_scaled = X_train.copy()
+        scaler.fit(X_train[SCALE_COLUMNS])
+        X_train_df_scaled[SCALE_COLUMNS] = scaler.transform(X_train_df_scaled[SCALE_COLUMNS])
+        self.X_train_df_scaled = X_train_df_scaled
         #Oversampling
-        X_train_res, y_train_res = oversample(X_train_scaled,y_train)
+        X_train_res, y_train_res = oversample(X_train_df_scaled,y_train)
         #Transforma para LSTM
         X_train_lstm,y_train_lstm = create_lstm_dataset(X_train_res,y_train_res,self.time_steps)
         
-        self.train_lstm = (X_train_lstm,y_train_lstm)
+        train_shape = (None,self.time_steps,X_train_lstm.shape[-1])
 
-        train_shape = (None,time_steps,X_train_lstm.shape[-1])
-
-        self.train_data = (X_train_lstm,y_train_lstm)
+        self.train_data = {'X':X_train_lstm, 'y':y_train_lstm}
         self.train_shape = train_shape
 
 
-    def fit(self,epochs=200,build_model=True):
-        if build_model:
-            self.buildModel(self.train_shape)
-        results = self.model.fit(self.train_lstm[0], self.train_lstm[1], epochs=epochs, batch_size=100,callbacks=[self.checkpoint], verbose=1)
+    def getClassWeights(self):
+        y_integers = np.argmax(self.train_lstm[1], axis=1)
+        class_weights = compute_class_weight('balanced', np.unique(y_integers), y_integers)
+        d_class_weights = dict(enumerate(class_weights))
+        return d_class_weights
 
-
-    def predict(self,data):
-        y_columns = pd.get_dummies(self.test[['acao']]).sort_index(axis=1).columns
-        time_steps = self.test_shape[1]
-        predictions = self.model.predict(data)
-        prediction_df = pd.DataFrame(predictions,columns=y_columns,index=self.test_df[time_steps:].index).sort_index(axis=1)
-        self.prediction = prediction_df
-        return prediction_df
 
 
     def loadTestData(self,path):
@@ -126,7 +94,7 @@ class Trader:
         #Transforma para LSTM
         X_test_lstm,y_test_lstm = create_lstm_dataset(X_test_scaled,y_test,self.time_steps)
 
-        test_shape = (None,time_steps,X_test_lstm.shape[-1])
+        test_shape = (None,self.time_steps,X_test_lstm.shape[-1])
 
         self.test_data = (X_test_lstm,y_test_lstm)
         self.test_shape = test_shape

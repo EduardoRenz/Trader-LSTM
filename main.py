@@ -13,6 +13,8 @@ import datetime as dt
 
 from funcoes import *
 from Trader import Trader
+from model import *
+
 
 pd.set_option('precision', 6)
 pd.set_option('display.float_format', lambda x: '%.6f' % x)
@@ -23,7 +25,8 @@ trader = Trader('trade_oversampled.h5')
 trader.loadTrainData('./dolar/negocios/20200220_dolh20')
 
 #%% Treinar ou Re-Treinar o modelo
-trader.model.load_weights('./dolar/dolar_oversampled.h5')
+#trader.model.load_weights('./dolar/dolar_oversampled.h5')
+trader.buildModel(trader.train_shape)
 trader.fit()
 
 #%%

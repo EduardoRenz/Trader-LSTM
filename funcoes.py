@@ -105,7 +105,8 @@ def loadNegocios(path):
   negocios.vap_5min_comprador.fillna(method='pad',inplace=True)
   negocios.vap_5min_direto.fillna(method='pad',inplace=True)
 
-  negocios.fillna(0,inplace=True)
+  negocios.dropna(0,inplace=True)
+
 
   #Aqui o que o trader deve fazer
   negocios['acao'] = 'do_nothing'
