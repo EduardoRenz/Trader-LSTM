@@ -8,7 +8,8 @@ def askSize = papel.askSize(); // qtd de vendas no melhor preço de venda
 def change = papel.change(); // variacao percentual
 def volume = papel.volume(); // volume negociado
 
-def message = "$last"
+
+def message = "index;$last;$bid;$bidSize;$ask;$askSize;data";
 
 def post = new URL( "http://127.0.0.1:5000/negocios").openConnection() as HttpURLConnection
 post.setRequestMethod("POST")

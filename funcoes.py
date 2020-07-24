@@ -134,15 +134,14 @@ def negociosWithDummies(negocios):
   return df
 
 #Sugere entradas de compra e venda na coluna acao
-def sugestEntrances(negocios):
+def sugestEntrances(negocios,spread_minimo=2):
   #pontos de entrada automatico
-  negocios['acao'] = 'do_nothing' # reset
+  negocios['acao'] = 'do nothing' # reset
 
   current_moment = negocios.index.min()
   last_moment = current_moment
   delta = timedelta(minutes=4) # steps que vao avançar 
   look_forward = timedelta(minutes=5) #Quanto ira olhar para frente para ver qual será o preço
-  spread_minimo = 2 # minimo de pontos que tem que variar para entarr na operacao
 
   #avança i vezes para frente verificando os preços
   for i in range(180):
@@ -157,8 +156,8 @@ def sugestEntrances(negocios):
     else:
       continue
 
-    entrada_compra = forward_min[0]
-    entrada_venda = forward_max[0]
+    entrada_compra = forward_min[-1]
+    entrada_venda = forward_max[-1]
     spread = maximo - minimo
 
     if(spread >= spread_minimo):
