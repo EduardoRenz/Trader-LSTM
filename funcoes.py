@@ -16,12 +16,12 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
-
-CORRETORAS = pd.read_csv('./CorBov.txt',header=None,names=['codigo','nome'],sep=';') # pegar DF das corretoras
-
+# Dataframe das corretoras
+CORRETORAS = pd.read_csv('./CorBov.txt',header=None,names=['codigo','nome','grupo'],sep=';') # pegar DF das corretoras
 # Cor dos agressores
 AGRESSORS_COLOR= {'vendedor':'red','direto':'grey','comprador':'green'}
-
+#Cores das odens
+ORDER_COLORS = {'buy':'green','sell':'red','stop':'yellow','acao_sell':'red','acao_buy':'green'}
 
 #Creates a multi-dimension dataset for LSTM networks
 def create_lstm_dataset(X, y, time_steps=50):
@@ -62,19 +62,21 @@ def loadNegocios(path):
   negocios.rename(columns={"vendedor":"cod_vendedor"},inplace=True)
   negocios.rename(columns={"comprador":"cod_comprador"},inplace=True)
   #merge para pegar o nome das corretoras
-  negocios = negocios.merge(CORRETORAS,left_on="cod_vendedor",right_on="codigo",how='left').rename(columns={"nome":"vendedor"}) # merges com corretora
-  negocios = negocios.merge(CORRETORAS,left_on="cod_comprador",right_on="codigo",how='left').rename(columns={"nome":"comprador"}) # merges com corretora
+  negocios = negocios.merge(CORRETORAS,left_on="cod_vendedor",right_on="codigo",how='left').rename(columns={"nome":"vendedor","grupo":"grupo_vendedor"}) # merges com corretora
+  negocios = negocios.merge(CORRETORAS,left_on="cod_comprador",right_on="codigo",how='left').rename(columns={"nome":"comprador","grupo":"grupo_comprador"}) # merges com corretora
   #Definir que corretora é uma categoria
   negocios.vendedor = negocios.vendedor.astype('category') # transformar corretora em categoria
   negocios.comprador = negocios.comprador.astype('category') # transformar corretora em cateogria
+  negocios.grupo_vendedor = negocios.grupo_vendedor.astype('category')
+  negocios.grupo_comprador = negocios.grupo_comprador.astype('category')
   #Atribuir inidce sendo o tempo
   negocios.index =pd.to_datetime(negocios.datetime , format='%Y%m%d%H%M%S') # definir indice como sendo o datetime
   # Desduplicar segundos no times and trades adicionando ms
   negs_p_segundo = negocios.groupby(level=0).cumcount()
   negocios.index = negocios.index + pd.to_timedelta(negs_p_segundo, unit='ms')
   #Preenche lacunas de tempo com milisegundos
-  full_day = pd.date_range(negocios.index.min(),negocios.index.max(),freq='ms')
-  negocios_full_day = negocios.reindex(full_day,fill_value=None)
+  #full_day = pd.date_range(negocios.index.min(),negocios.index.max(),freq='ms')
+  #negocios_full_day = negocios.reindex(full_day,fill_value=None)
   #negocios.resample('10ms').fillna(None)
   # Testar : Definindo quem foi agressor
   negocios.loc[negocios.cod_agressor == 1,'agressor'] = 'comprador'
@@ -83,35 +85,43 @@ def loadNegocios(path):
   #Drop de colunas desnecessarias
   negocios = negocios.drop('datetime',axis=1)
   negocios = negocios.drop(['codigo_x','codigo_y','cod_vendedor','cod_comprador','cod_agressor'],axis=1) # drop de colunas desnecessarias
-
-
   #Data engeenering
-  negocios['vap'] = negocios.groupby(['preco'])['qtd'].transform('sum')
-  negocios['vap_5min'] = negocios.rolling('5min',min_periods=1).qtd.sum()
-  negocios['vap_comprador'] = negocios.query("agressor == 'comprador'").groupby(['preco'])['qtd'].transform('sum')
-  negocios['vap_vendedor'] = negocios.query("agressor == 'vendedor'").groupby(['preco'])['qtd'].transform('sum')
-  negocios['vap_direto'] = negocios.query("agressor == 'direto'").groupby(['preco'])['qtd'].transform('sum')
+  #vap
+  #negocios['vap_comprador'] = negocios.query("agressor == 'comprador'").groupby(['preco'])['qtd'].transform('sum')
+  #negocios['vap_vendedor'] = negocios.query("agressor == 'vendedor'").groupby(['preco'])['qtd'].transform('sum')
+  #negocios['vap_direto'] = negocios.query("agressor == 'direto'").groupby(['preco'])['qtd'].transform('sum')
+  #negocios.vap_vendedor.fillna(method='pad',inplace=True)
+  #negocios.vap_comprador.fillna(method='pad',inplace=True)
+  #negocios.vap_direto.fillna(method='pad',inplace=True)
 
-  negocios.vap_vendedor.fillna(method='pad',inplace=True)
-  negocios.vap_comprador.fillna(method='pad',inplace=True)
-  negocios.vap_direto.fillna(method='pad',inplace=True)
+  #negocios.loc[negocios.agressor == 'vendedor','qtd'] = negocios.loc[negocios.agressor == 'vendedor','qtd'] * -1  # Inverte valor da quantidade quando agressor é vendedor
 
+  #Vap 5 min
   negocios['vap_5min_comprador'] = negocios.query("agressor == 'comprador'").rolling('5min',min_periods=1)['qtd'].sum()
   negocios['vap_5min_vendedor'] = negocios.query("agressor == 'vendedor'").rolling('5min',min_periods=1)['qtd'].sum() 
-  negocios['vap_5min_direto'] = negocios.query("agressor == 'direto'").rolling('5min',min_periods=1)['qtd'].sum() 
-
-
   negocios.vap_5min_vendedor.fillna(method='pad',inplace=True)
   negocios.vap_5min_comprador.fillna(method='pad',inplace=True)
-  negocios.vap_5min_direto.fillna(method='pad',inplace=True)
+
+
+  #Vap 15 min
+  negocios['vap_15min_comprador'] = negocios.query("agressor == 'comprador'").rolling('15min',min_periods=1)['qtd'].sum()
+  negocios['vap_15min_vendedor'] = negocios.query("agressor == 'vendedor'").rolling('15min',min_periods=1)['qtd'].sum() 
+  negocios.vap_15min_vendedor.fillna(method='pad',inplace=True)
+  negocios.vap_15min_comprador.fillna(method='pad',inplace=True)
+
+  #Vap 5s
+  #negocios['vap_2s_comprador'] = negocios.query("agressor == 'comprador'").rolling('2s',min_periods=1)['qtd'].sum()
+  #negocios['vap_2s_vendedor'] = negocios.query("agressor == 'vendedor'").rolling('2s',min_periods=1)['qtd'].sum() 
+  #negocios.vap_2s_vendedor.fillna(method='pad',inplace=True)
+  #negocios.vap_2s_comprador.fillna(method='pad',inplace=True)
+
 
   negocios.dropna(0,inplace=True)
-
-
   #Aqui o que o trader deve fazer
-  negocios['acao'] = 'do_nothing'
+  negocios['acao'] = 'do nothing'
   negocios['acao'] = negocios['acao'].astype('category')
   negocios.acao.cat.set_categories(['do nothing','buy','sell'],inplace=True)
+
   return negocios
 
 #Gera dummies já com todas as corretoras

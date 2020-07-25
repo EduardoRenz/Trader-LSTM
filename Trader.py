@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 
 from sklearn.utils.class_weight import compute_class_weight
 
-ORDER_COLORS = {'buy':'green','sell':'red','stop':'yellow'}
+ORDER_COLORS = {'buy':'green','sell':'red','stop':'yellow','acao_sell':'red','acao_buy':'green'}
 METRICS = [
      tf.keras.metrics.CategoricalAccuracy(name='accuracy'),
      tf.keras.metrics.Precision(name='precision'),
