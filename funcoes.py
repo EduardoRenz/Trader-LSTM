@@ -18,6 +18,7 @@ import plotly.graph_objects as go
 
 # Dataframe das corretoras
 CORRETORAS = pd.read_csv('./CorBov.txt',header=None,names=['codigo','nome','grupo'],sep=';') # pegar DF das corretoras
+CORRETORAS.fillna('outros',inplace=True)
 # Cor dos agressores
 AGRESSORS_COLOR= {'vendedor':'red','direto':'grey','comprador':'green'}
 #Cores das odens
