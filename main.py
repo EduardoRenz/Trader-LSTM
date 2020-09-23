@@ -22,8 +22,8 @@ pd.set_option('display.float_format', lambda x: '%.6f' % x)
 # %%
 trader = Trader()
 #%%
-trader.loadTrainData('./dolar/negocios/20200220_dolh20')
-print(trader.X_train_df_scaled.tail())
+#trader.loadTrainData('./dolar/negocios/20200220_dolh20')
+#print(trader.X_train_df_scaled.tail())
 
 #%% Treinar ou Re-Treinar o modelo
 #trader.model.load_weights('./dolar/dolar_oversampled.h5')
