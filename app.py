@@ -1,6 +1,7 @@
 #%%
 from flask import Flask,request 
 from flask_cors import CORS,cross_origin
+import json
 app = Flask(__name__)
 CORS(app)
 
@@ -12,7 +13,12 @@ def hello_world():
 @app.route('/trades',methods=['POST'])
 @cross_origin()
 def saveTrades():
-    print(request.data )
+    data = json.loads(request.data)
+    with open(f'inputs/{data["quoteTrade"]["M"]}_trades.json', 'a+') as outfile:
+        offers = data["L"]
+        for offer in offers:
+            print(offer)
+            outfile.write(json.dumps(offer)+",")
     return 'ok'
 
 
