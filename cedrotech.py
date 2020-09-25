@@ -35,7 +35,7 @@ async def getTrades(websocket,token,active_code):
         "module": "quotes",  
         "service": "quoteTrade",  
         "parameterGet": active_code,  
-        "parameters": {"subsbribetype": "1", "quantidade": "1" ,"delay": "600"}
+        "parameters": {"subsbribetype": "1", "quantidade": "1"}
     }  
     await websocket.send(json.dumps(data))
     response = await websocket.recv()

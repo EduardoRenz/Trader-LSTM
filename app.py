@@ -2,6 +2,7 @@
 from flask import Flask,request 
 from flask_cors import CORS,cross_origin
 import json
+import requests
 app = Flask(__name__)
 CORS(app)
 
@@ -21,6 +22,12 @@ def saveTrades():
             outfile.write(json.dumps(offer)+",")
     return 'ok'
 
+@app.route('/quote/<ativo>',methods=['GET'])
+def getMarketData(ativo):
+    bot = requests.session()
+    r = bot.post('http://webfeeder.cedrotech.com/SignIn?login=dudarenz&password=102030')
+    dados = bot.get(f'http://webfeeder.cedrotech.com/services/quotes/quote/{ativo}')
+    return dados.json()
 
 print(__name__)
 
